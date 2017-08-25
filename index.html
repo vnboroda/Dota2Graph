@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 14px sans-serif;
+
+  height: 1200px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.dot {
+  stroke: #000;
+}
+
+// implemented for tooltip info box
+div.tooltip {
+  position: absolute;			
+  text-align: center;			
+  padding: 2px;				
+  font: 12px sans-serif;		
+  background: lightsteelblue;	
+  border: 0px;		
+  border-radius: 8px;			
+  pointer-events: none;			
+}
+
+// implementing gridlines on our graph for major tick marks
+//.grid line {
+//  stroke: lightgrey;
+//  stroke-opacity: 0.7;
+//  shape-rendering: crispEdges;
+//}
+
+</style>
+<body>
+
+
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script>
+
+var margin = {top: 75, right: 20, bottom: 70, left: 100},
+    width = 1200 - margin.left - margin.right,
+    height = 800 - margin.top - margin.bottom;
+
+var x = d3.scale.linear()
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var color = d3.scale.category10();
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .ticks(5)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+// tooltip div
+var div = d3.select("body").append("div")	
+    .attr("class", "tooltip")
+    //.style("display", "none");
+    .style("opacity", 0);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// images in boxes
+var defs = svg.append('svg:defs');
+
+
+// parse data
+d3.csv("data.csv", function(error, data) {
+  if (error) throw error;
+
+  data.forEach(function(d,i) {
+    d.pub = +d.pub;
+    d.pro = +d.pro;
+   
+    // add images???
+    defs.append("svg:pattern")
+      .attr("id","hero_id" + i)
+      .attr("width", 31)
+      .attr("height", 31)
+      .attr("patternUnits", "userSpaceOnUse")
+      .append("svg:image")
+        .attr("xlink:href", "imgs/alchemist.png")
+        .attr("width", 31)
+        .attr("height", 31)
+        .attr("x", 0)
+        .attr("y", 0);
+
+    //var circle = svg.append("circle")
+      //.attr("transform", "translate(" + d.pub + "," + y(d.pro) + ")")
+      //.attr("cx", function(d) { return x(d.pro);})
+      //.attr("cx", function(d) { return x(d.pro); })
+      //.attr("cy", function(d) { return y(d.pub); })
+      //.attr("cy", function(d) { return y(d.pub);})
+      //.attr("r", 31.0/2)
+      //.style("fill", "#fff")
+      //.style("fill", "url(#hero_id" + i + ")");
+  });
+
+  // use these to change axis limits
+  //x.domain([0,65]);
+  //y.domain([0,65]);
+  x.domain(d3.extent(data, function(d) { return d.pro; })).nice();
+  y.domain(d3.extent(data, function(d) { return d.pub; })).nice();
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("x", width/2.0)
+      .attr("y", 50)
+      .style("text-anchor", "middle")
+      .style("font-size", "34px")
+      .text("Pro Pick Rate (%)");
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -35)
+      .attr("x", -height/2.0)
+      //.attr("dy", ".71em")
+      .style("text-anchor", "middle")
+      .style("font-size", "34px")
+      .text("Pub Pick Rate (%)")
+
+//add a title 
+  svg.append("text")
+      .attr("x", width/2.0)
+      .attr("y", -(margin.top/2.0))
+      .attr("text-anchor", "middle")
+      .style("font-size", "34px")
+      .text("Hero Popularity: Professional vs Casual Players")
+
+
+// new way to use hero images instead of circles
+  svg.selectAll(".dot")
+      .data(data)
+    .enter().append("svg:image")
+      .attr("xlink:href", function(d) { 
+        console.log(d.img);
+        return  d.img; })
+      .attr("width", 31)
+      .attr("height", 31)
+      .attr("x", function(d) { return x(d.pro)-15.5;  })
+      .attr("y", function(d) { return y(d.pub)-15.5;  })
+
+      
+
+      // mouseover functions
+      .on("mouseover", function(d) {
+        div.transition()
+          .duration(200)
+          //.style("opacity", .9)
+          .style("display", "inline")
+          .style("width", d.name.length*10 + "px");
+        div .html(d.name)
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - 28) + "px");
+        })
+      .on("mouseout", function(d) {
+        div.transition()
+          .duration(500)
+          .style("opacity", 0);
+     });
+
+
+
+
+  var legend = svg.selectAll(".legend")
+      .data(color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  legend.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color);
+
+  legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d) { return d; });
+
+});
+
+</script>
